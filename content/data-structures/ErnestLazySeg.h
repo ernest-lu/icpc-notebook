@@ -8,17 +8,8 @@
 #pragma once
 template <typename T, typename Merge = plus<T>, typename LazyOp = ll>
 struct lazy_seg {
-  /*
-          T: Info semigroup
-          operation: T x T => T
-          id: T x 1 = T, 1 x T = T
-  */
-  /*
-          LazyOp:
-          mapping: F o S => S
-          composition: F o F => F
-          id: id o S = S for all S
-  */
+  /* operation: T x T => T, id: T x 1 = T, 1 x T = T */
+  /* LazyOp: mapping: F o S => S, comp: F o F => F, id: id o S = S */
   int n;
   vector<T> tr;
   vector<LazyOp> lazy_inc;

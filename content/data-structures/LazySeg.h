@@ -6,87 +6,118 @@
  */
 
 #pragma once
-template <typename T, typename Merge = plus<T>, typename LazyOp = ll>
-struct lazy_seg {
-  /* operation: T x T => T, id: T x 1 = T, 1 x T = T */
-  /* LazyOp: mapping: F o S => S, comp: F o F => F, id: id o S = S */
+template <class Info, class Tag> struct LazySegmentTree {
   int n;
-  vector<T> tr;
-  vector<LazyOp> lazy_inc;
-  Merge merge;
-
-  void pull(int z) { tr[z] = merge(tr[2 * z], tr[2 * z + 1]); };
-
-  lazy_seg(int n) : n(n), tr(4 * n + 5), lazy_inc(4 * n + 5), merge(Merge()) {}
-
-  lazy_seg(const vector<T> &a) : lazy_seg((int)a.size()) {
-    function<void(int, int, int)> build = [&](int z, int l, int r) {
-      if (l == r) {
-        tr[z] = T(a[l]);
+  std::vector<Info> info;
+  std::vector<Tag> tag;
+  LazySegmentTree() : n(0) {}
+  LazySegmentTree(int n_, Info v_ = Info()) { init(n_, v_); }
+  template <class T> LazySegmentTree(std::vector<T> init_) { init(init_); }
+  void init(int n_, Info v_ = Info()) { init(std::vector(n_, v_)); }
+  template <class T> void init(std::vector<T> init_) {
+    n = init_.size();
+    info.assign(4 << std::__lg(n), Info());
+    tag.assign(4 << std::__lg(n), Tag());
+    std::function<void(int, int, int)> build = [&](int p, int l, int r) {
+      if (r - l == 1) {
+        info[p] = init_[l];
         return;
       }
-      int m = (l + r) >> 1;
-      build(2 * z, l, m);
-      build(2 * z + 1, m + 1, r);
-      pull(z);
+      int m = (l + r) / 2;
+      build(2 * p, l, m);
+      build(2 * p + 1, m, r);
+      pull(p);
     };
-    build(1, 0, n - 1);
+    build(1, 0, n);
   }
-
-  void push(int z, int l, int r) {
-    tr[z] += lazy_inc[z];
-    if (l < r) {
-      for (int i = 0; i < 2; i++) {
-        lazy_inc[2 * z + i] += lazy_inc[z];
-      }
-    }
-    lazy_inc[z] = LazyOp{};
+  void pull(int p) { info[p] = info[2 * p] + info[2 * p + 1]; }
+  void apply(int p, const Tag &v) {
+    info[p].apply(v);
+    tag[p].apply(v);
   }
-
-  void set(int z, int l, int r, int qg, const T &val) {
-    push(z, l, r);
-    if (l > qg or r < qg)
-      return;
-    if (l == r and l == qg) {
-      tr[z] = val;
+  void push(int p) {
+    apply(2 * p, tag[p]);
+    apply(2 * p + 1, tag[p]);
+    tag[p] = Tag();
+  }
+  void modify(int p, int l, int r, int x, const Info &v) {
+    if (r - l == 1) {
+      info[p] = v;
       return;
     }
-    int m = (l + r) >> 1;
-    set(2 * z, l, m, qg, val);
-    set(2 * z + 1, m + 1, r, qg, val);
-    pull(z);
+    int m = (l + r) / 2;
+    push(p);
+    if (x < m) {
+      modify(2 * p, l, m, x, v);
+    } else {
+      modify(2 * p + 1, m, r, x, v);
+    }
+    pull(p);
   }
-
-  void up_inc(int z, int l, int r, int ql, int qr, const LazyOp &val) {
-    push(z, l, r);
-    if (ql > qr)
-      return;
-    if (ql == l && qr == r) {
-      lazy_inc[z] += val;
-      push(z, l, r);
+  void modify(int p, const Info &v) { modify(1, 0, n, p, v); }
+  Info rangeQuery(int p, int l, int r, int x, int y) {
+    if (l >= y || r <= x) {
+      return Info();
+    }
+    if (l >= x && r <= y) {
+      return info[p];
+    }
+    int m = (l + r) / 2;
+    push(p);
+    return rangeQuery(2 * p, l, m, x, y) + rangeQuery(2 * p + 1, m, r, x, y);
+  }
+  Info rangeQuery(int l, int r) { return rangeQuery(1, 0, n, l, r); }
+  void rangeApply(int p, int l, int r, int x, int y, const Tag &v) {
+    if (l >= y || r <= x) {
       return;
     }
-    int m = (l + r) >> 1;
-    up_inc(2 * z, l, m, ql, min(qr, m), val);
-    up_inc(2 * z + 1, m + 1, r, max(ql, m + 1), qr, val);
-    pull(z);
-  };
-
-  T query(int z, int l, int r, int ql, int qr) {
-    push(z, l, r);
-    if (ql > qr)
-      return T{};
-    if (ql == l && qr == r) {
-      return tr[z];
+    if (l >= x && r <= y) {
+      apply(p, v);
+      return;
     }
-    int m = (l + r) >> 1;
-    return merge(query(2 * z, l, m, ql, min(qr, m)),
-                 query(2 * z + 1, m + 1, r, max(ql, m + 1), qr));
-  };
-
-  void up_inc(int l, int r, const LazyOp &val) {
-    return up_inc(1, 0, n - 1, l, r, val);
+    int m = (l + r) / 2;
+    push(p);
+    rangeApply(2 * p, l, m, x, y, v);
+    rangeApply(2 * p + 1, m, r, x, y, v);
+    pull(p);
   }
-  void set(int g, const T &val) { return set(1, 0, n - 1, g, val); }
-  T query(int l, int r) { return query(1, 0, n - 1, l, r); }
+  void rangeApply(int l, int r, const Tag &v) {
+    return rangeApply(1, 0, n, l, r, v);
+  }
+  template <class F> int findFirst(int p, int l, int r, int x, int y, F pred) {
+    if (l >= y || r <= x || !pred(info[p])) {
+      return -1;
+    }
+    if (r - l == 1) {
+      return l;
+    }
+    int m = (l + r) / 2;
+    push(p);
+    int res = findFirst(2 * p, l, m, x, y, pred);
+    if (res == -1) {
+      res = findFirst(2 * p + 1, m, r, x, y, pred);
+    }
+    return res;
+  }
+  template <class F> int findFirst(int l, int r, F pred) {
+    return findFirst(1, 0, n, l, r, pred);
+  }
+  template <class F> int findLast(int p, int l, int r, int x, int y, F pred) {
+    if (l >= y || r <= x || !pred(info[p])) {
+      return -1;
+    }
+    if (r - l == 1) {
+      return l;
+    }
+    int m = (l + r) / 2;
+    push(p);
+    int res = findLast(2 * p + 1, m, r, x, y, pred);
+    if (res == -1) {
+      res = findLast(2 * p, l, m, x, y, pred);
+    }
+    return res;
+  }
+  template <class F> int findLast(int l, int r, F pred) {
+    return findLast(1, 0, n, l, r, pred);
+  }
 };

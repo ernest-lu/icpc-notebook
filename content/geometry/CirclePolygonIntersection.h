@@ -12,6 +12,7 @@
 
 #include "../../content/geometry/Point.h"
 
+// make sure to consider the value of infinity when doing this... if it's too big it'll blow up! (from halfplane intersection and stuff)
 typedef Point<double> P;
 #define arg(p, q) atan2(p.cross(q), p.dot(q))
 double circlePoly(P c, double r, vector<P> ps) {

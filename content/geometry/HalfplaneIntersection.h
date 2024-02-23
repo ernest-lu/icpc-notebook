@@ -46,6 +46,7 @@ struct Halfplane {
 
 template <class T>
 vector<Point<T>> hp_intersect(vector<Halfplane<T>> &H) {
+    // important note: H is changed within this function so make a copy if you need it later!
     using P = Point<T>;
     using Halfplane = Halfplane<T>;
     P box[4] = {

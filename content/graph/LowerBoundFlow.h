@@ -44,8 +44,7 @@ template <typename C, typename R = C, bool lb = false> struct dinic {
       if (level[source] == -1)
         break;
       std::fill(edge_pos.begin(), edge_pos.end(), 0);
-      std::function<flow_type(int, flow_type)> find_path = [&](int from,
-                                                               flow_type res) {
+      auto find_path = [&](int from, flow_type res) {
         if (from == sink)
           return res;
         for (int &ept = edge_pos[from]; ept < (int)adj[from].size(); ++ept) {

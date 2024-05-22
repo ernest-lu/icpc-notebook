@@ -10,7 +10,7 @@
  */
 #pragma once
 
-#include "../../content/geometry/Point.h"
+#include "Point.h"
 
 // make sure to consider the value of infinity when doing this... if it's too big it'll blow up! (from halfplane intersection and stuff)
 typedef Point<double> P;

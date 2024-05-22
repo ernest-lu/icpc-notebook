@@ -21,6 +21,7 @@ template <class T>
 struct Halfplane {
     // the halfplane determined by p and pq takes all points that are _counterclockwise_ 
     // wrt p -> (p + pq) vector
+    // For boolean polygon intersection where precision makes a big difference: see the last function!
     Point<T> p, pq;
     long double angle;
 
@@ -106,4 +107,21 @@ vector<Point<T>> hp_intersect(vector<Halfplane<T>> &H) {
     }
     ret.back() = inter(dq[len - 1], dq[0]);
     return ret;
+}
+
+// Checks if a bunch of halfplanes have STRICTLY positive intersection.
+// DO NOT use convex hull for doulbes here since it has poor precision and will remove
+// Points that aren't actually duplicates
+// Proof: Faster Than Light NWERC 2022-2023
+template <class T>
+bool positive_intersection(vector<Halfplane<T>> &H) {
+    using P = Point<T>;
+    vector<P> intersection = hp_intersect(all);
+    if (intersection.empty()) return true;
+    // >= 3 unique points means positive area
+    sort(intersection.begin(), intersection.end());
+    intersection.erase(unique(intersection.begin(), intersection.end()), intersection.end());
+    if (intersection.size() > 2) return false;
+    // 1 or 2 points means 0 area
+    return true;
 }
